@@ -1,39 +1,15 @@
-// import 'dart:html';
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:async';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:center_notify/Districts.dart';
-import 'package:intl/intl.dart';
-import 'States.dart';
-// import 'package:flutter_background/flutter_background.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
-
 import 'homepage.dart';
 
-const AndroidNotificationChannel channel = AndroidNotificationChannel(
-  'high_importance_channel', // id
-  'High Importance Notifications', // title
-  'This channel is used for important notifications.', // description
-  importance: Importance.high,
-);
-
-final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-FlutterLocalNotificationsPlugin();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await flutterLocalNotificationsPlugin
-      .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>()
-      ?.createNotificationChannel(channel);
-
   runApp(CenterNotifyApp());
 }
 
@@ -85,6 +61,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
     initializePreference();
 
+
     Timer(Duration(seconds: 5),
             ()=>Navigator.pushReplacement(context,
             MaterialPageRoute(builder:
@@ -95,7 +72,7 @@ class _SplashScreenState extends State<SplashScreen> {
                     isDistrictSelected: this.isDistrictSelected,
                     pressNotify: this.pressNotify,
                     isDurationSelected: this.isDurationSelected,
-                    duration: this.duration, preferencesInstance: this.preferencesInstance, channel: channel, flutterLocalNotificationsPlugin: flutterLocalNotificationsPlugin, districts: districts,)
+                    duration: this.duration, preferencesInstance: this.preferencesInstance, districts: districts,)
             )
         )
     );
@@ -130,6 +107,7 @@ class _SplashScreenState extends State<SplashScreen> {
     return "Initialized";
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -162,28 +140,5 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 }
 
-// Future<bool> backgroundInitialize() async {
-//   final androidConfig = FlutterBackgroundAndroidConfig(
-//     notificationTitle: "Title of the notification",
-//     notificationText: "Text of the notification",
-//     notificationImportance: AndroidNotificationImportance.High,
-//     notificationIcon: AndroidResource(
-//         name:
-//             '@mipmap/ic_launcher'), // Default is ic_launcher from folder mipmap
-//   );
-//   var success =
-//       await FlutterBackground.initialize(androidConfig: androidConfig);
-//   print(success);
-//   if (success) {
-//     var hasBackgroundExecutionStarted = await enableBackgroundExecution();
-//     print(hasBackgroundExecutionStarted);
-//   }
-//   return success;
-// }
-//
-// Future<bool> enableBackgroundExecution() async {
-//   bool success = await FlutterBackground.enableBackgroundExecution();
-//   return success;
-// }
 
 
