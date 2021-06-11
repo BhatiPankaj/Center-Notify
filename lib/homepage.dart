@@ -67,8 +67,8 @@ void scheduleNotification() async {
   var convertDataToJson = json.decode(response.body);
   data = convertDataToJson['sessions'];
   List<String> lines = [];
-  // ["1","2","3","4","5","6","7","7","8","8","9",];
-  /// find number of vaccines and them to the list
+
+  /// find the number of vaccines and add them to the list
   if (data != null && data.length != 0) {
     data.forEach((element) {
       if (element['vaccine'] == "COVAXIN") {
@@ -89,6 +89,7 @@ void scheduleNotification() async {
     });
   }
 
+  /// style the notification
   final InboxStyleInformation inboxStyleInformation = InboxStyleInformation(
       lines,
       htmlFormatLines: true,
@@ -143,13 +144,22 @@ putString(key, val) async {
   return _res;
 }
 
-/// Adding List of Strings
+/// Adding List of Strings form JSON
 putJSON(key, val) async {
   Future<SharedPreferences> preferencesInstance =
       SharedPreferences.getInstance();
   final SharedPreferences prefs = await preferencesInstance;
   var valString = jsonEncode(val);
   var _res = prefs.setString("$key", valString);
+  return _res;
+}
+
+/// Adding List of Strings
+putStringList(key, val) async {
+  Future<SharedPreferences> preferencesInstance =
+      SharedPreferences.getInstance();
+  final SharedPreferences prefs = await preferencesInstance;
+  var _res = prefs.setStringList("$key", val);
   return _res;
 }
 
@@ -166,54 +176,68 @@ class HomePage extends StatefulWidget {
   final int duration;
 
   final List districts;
-
+  final List<String> pincodes;
+  final List<String> pincodeSelectedList;
   final Future<SharedPreferences> preferencesInstance;
 
-  HomePage({
-    this.stateName,
-    this.districtName,
-    this.districtID,
-    this.isStateSelected,
-    this.isDistrictSelected,
-    this.pressNotify,
-    this.isDurationSelected,
-    this.duration,
-    this.districts,
-    this.preferencesInstance,
-  });
+  HomePage(
+      {this.stateName,
+      this.districtName,
+      this.districtID,
+      this.isStateSelected,
+      this.isDistrictSelected,
+      this.pressNotify,
+      this.isDurationSelected,
+      this.duration,
+      this.districts,
+      this.preferencesInstance,
+      this.pincodes,
+      this.pincodeSelectedList});
 
   @override
   HomePageState createState() => HomePageState(
-        stateName: this.stateName,
-        districtName: this.districtName,
-        districtID: this.districtID,
-        isStateSelected: this.isStateSelected,
-        isDistrictSelected: this.isDistrictSelected,
-        pressNotify: this.pressNotify,
-        isDurationSelected: this.isDurationSelected,
-        duration: this.duration,
-        districts: this.districts,
-        preferencesInstance: this.preferencesInstance,
-      );
+      stateName: this.stateName,
+      districtName: this.districtName,
+      districtID: this.districtID,
+      isStateSelected: this.isStateSelected,
+      isDistrictSelected: this.isDistrictSelected,
+      pressNotify: this.pressNotify,
+      isDurationSelected: this.isDurationSelected,
+      duration: this.duration,
+      districts: this.districts,
+      preferencesInstance: this.preferencesInstance,
+      pincodes: this.pincodes,
+      pincodeSelectedList: this.pincodeSelectedList);
 }
 
 class HomePageState extends State<HomePage> {
-  HomePageState({
-    this.stateName,
-    this.districtName,
-    this.districtID,
-    this.isStateSelected,
-    this.isDistrictSelected,
-    this.pressNotify,
-    this.isDurationSelected,
-    this.duration,
-    this.districts,
-    this.preferencesInstance,
-  });
+  HomePageState(
+      {this.stateName,
+      this.districtName,
+      this.districtID,
+      this.isStateSelected,
+      this.isDistrictSelected,
+      this.pressNotify,
+      this.isDurationSelected,
+      this.duration,
+      this.districts,
+      this.preferencesInstance,
+      this.pincodes,
+      this.pincodeSelectedList});
+
+  static List<bool> isPincodeSelectedList = [];
+  List durations = [3, 15, 30, 60, 120, 180, 240];
+  List districts;
+  List data;
+  List<String> pincodes;
+  List<String> pincodeSelectedList;
+  List selectedPincodesList = [];
 
   String stateName;
   String districtName;
   String districtID;
+  String url;
+  String _chosenDateTime;
 
   bool isStateSelected;
   bool isDistrictSelected;
@@ -223,15 +247,7 @@ class HomePageState extends State<HomePage> {
   bool isTimeOn = false;
   bool initialized = false;
   bool isBackgroundNotificationON = false;
-  static bool isPincodeSelected = false;
-
-  List durations = [3, 15, 30, 60, 120, 180, 240];
-  List districts;
-  List data;
-  List pincodes = [];
-
-  String url;
-  String _chosenDateTime;
+  bool isPincodeSelectedToNotify = false;
 
   int indexOfList;
   int numberOfCovaxin = 0;
@@ -240,13 +256,9 @@ class HomePageState extends State<HomePage> {
   int numberOfCovishieldPreviousValue;
   int count = 0;
   int duration;
+  int numberOfPincodeSelected = 0;
 
   Timer _timer;
-
-  static List<bool> isCheckedList = [];
-  List selectedPincodes = [];
-
-  // bool _isSelected = false;
 
   Future<SharedPreferences> preferencesInstance;
 
@@ -257,8 +269,19 @@ class HomePageState extends State<HomePage> {
     super.initState();
     AndroidAlarmManager.initialize();
     registerChannel();
+    calculateNumberOfPincodesSelected();
   }
 
+  /// calculate number of pincodes have selected by the user
+  String calculateNumberOfPincodesSelected() {
+    numberOfPincodeSelected = 0;
+    pincodeSelectedList.forEach((element) {
+      if (element == 'true') numberOfPincodeSelected++;
+    });
+    return numberOfPincodeSelected.toString();
+  }
+
+  /// register created channel for notification
   registerChannel() async {
     await flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
@@ -273,6 +296,7 @@ class HomePageState extends State<HomePage> {
     flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
+  /// call AlarmFire with duration for background notification
   void setAlarmFire() async {
     print("Set Alarm Fire");
     final int helloAlarmID = 0;
@@ -282,34 +306,77 @@ class HomePageState extends State<HomePage> {
     );
   }
 
-  void addPincodes(String districtID, String chosenDateTime) async {
+  /// generate horizontal ListView for selected Pincodes
+  Container generateListViewForSelectedPincodes() {
+    List<String> selectedPincodes = [];
+    int i = 0;
+
+    pincodes.forEach((element) {
+      if (pincodeSelectedList[i] == 'true') {
+        selectedPincodes.add(element.toString());
+      }
+      i++;
+    });
+
+    return Container(
+      width: 210,
+      height: 30,
+      child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: selectedPincodes.length,
+          itemBuilder: (BuildContext context, int index) {
+              isPincodeSelectedToNotify = true;
+            return Text(
+              index == numberOfPincodeSelected - 1
+                  ? "${selectedPincodes[index]}"
+                  : "${selectedPincodes[index]}, ",
+              style: TextStyle(color: Colors.white),
+            );
+          }),
+    );
+  }
+
+  /// get pincodes for the selected district by calling API
+  void getPincodes(String districtID, String chosenDateTime) async {
     pincodes?.clear();
+    Set pincodeSet = new Set();
+
     var response = await http.get(
         Uri.encodeFull(
             "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByDistrict?district_id=$districtID&date=$chosenDateTime"),
         headers: {"Accept": "application/json"});
+
     var convertDataToJson = json.decode(response.body);
+
     data = convertDataToJson['sessions'];
-    Set pincodeSet = new Set();
+
     if (data != null && data.length != 0) {
       data.forEach((element) {
         pincodeSet.add(element['pincode']);
       });
     }
+
     pincodeSet.forEach((element) {
-      pincodes.add(element);
+      pincodes.add(element.toString());
     });
+
     setState(() {
       pincodes?.sort();
-      isCheckedList.clear();
-      // if(isCheckedList == null)
-      //   isCheckedList = List(pincodes.length);
-      for (int i = 0; i < pincodes.length; i++) isCheckedList.add(false);
+      isPincodeSelectedList.clear();
+      pincodeSelectedList.clear();
+
+      for (int i = 0; i < pincodes.length; i++) {
+        isPincodeSelectedList.add(false);
+        pincodeSelectedList.add("false");
+      }
+
+      putStringList("pincodes", pincodes);
+      putStringList('selectedPincodes', pincodeSelectedList);
       print(pincodes);
     });
-    // return "Success";
   }
 
+  /// this function gives slot information on screen without giving notification
   Future<String> slotNotifyWithoutNotification(
       String url, String district) async {
     var response = await http
@@ -335,6 +402,7 @@ class HomePageState extends State<HomePage> {
     return "Success";
   }
 
+  /// this is periodic function for calling API periodically by using Timer() inbuilt-function
   void timerCall(String url, String district, int duration) {
     count = 0;
     if (isTimeOn == true)
@@ -348,12 +416,8 @@ class HomePageState extends State<HomePage> {
       });
   }
 
-  void changeState(bool value) {
-    setState(() {
-      print(value.toString());
-      isPincodeSelected = value;
-    });
-  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -416,6 +480,12 @@ class HomePageState extends State<HomePage> {
                         removeKey("districtName");
                         setState(() {
                           districts = allDistricts[value - 1];
+                          pincodes.clear();
+                          isPincodeSelectedList.clear();
+                          pincodeSelectedList.clear();
+                          putStringList("pincodes", pincodes);
+                          putStringList(
+                              'selectedPincodes', pincodeSelectedList);
                         });
                       }),
                 ),
@@ -453,7 +523,7 @@ class HomePageState extends State<HomePage> {
                                   districts[index]['district_name']);
                               putString("districtID",
                                   districts[index]['district_id'].toString());
-                              addPincodes(
+                              getPincodes(
                                   districts[index]['district_id'].toString(),
                                   formatter.format(DateTime.now().add(Duration(
                                     hours: 8,
@@ -484,18 +554,53 @@ class HomePageState extends State<HomePage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            "Select Pincodes",
-                            style: TextStyle(
-                                color: pincodes.length > 0
-                                    ? Colors.white
-                                    : Colors.white54),
-                          ),
+                          calculateNumberOfPincodesSelected() == '0'
+                              ? Text(
+                                  "Please select pincode",
+                                  style: TextStyle(
+                                      color: pincodes.length > 0
+                                          ? Colors.white
+                                          : Colors.white54),
+                                )
+                              : generateListViewForSelectedPincodes(),
+                          // ListView.builder(scrollDirection: Axis.horizontal,itemCount: numberOfPincodeSelected,itemBuilder: (BuildContext context,
+                          //     int index) {
+                          //   return  Text(
+                          //     "${selectedPincodesList[index]}",
+                          //     style: TextStyle(
+                          //         color:
+                          //             Colors.white),
+                          //   );
+                          // }),
+                          // Text(
+                          //   "Number of selected pincodes: $numberOfPincodeSelected",
+                          //   style: TextStyle(
+                          //       color:
+                          //           Colors.white),
+                          // ),
                           IconButton(
                             alignment: Alignment.centerRight,
                             onPressed: pincodes.length == 0
                                 ? () {}
                                 : () {
+                                    if (isPincodeSelectedList.length == 0) {
+                                      if (pincodeSelectedList.length > 0)
+                                        for (int i = 0;
+                                            i < pincodeSelectedList.length;
+                                            i++) {
+                                          if (pincodeSelectedList[i] == 'true')
+                                            isPincodeSelectedList.add(true);
+                                          else
+                                            isPincodeSelectedList.add(false);
+                                        }
+                                      else {
+                                        for (int i = 0;
+                                            i < pincodes.length;
+                                            i++) {
+                                          isPincodeSelectedList.add(false);
+                                        }
+                                      }
+                                    }
                                     showDialog(
                                         context: context,
                                         builder: (BuildContext context) {
@@ -527,13 +632,14 @@ class HomePageState extends State<HomePage> {
                                                                   .white)),
                                                       // subtitle: Text('sub demo mode'),
                                                       value:
-                                                          isCheckedList[index],
+                                                          isPincodeSelectedList[
+                                                              index],
                                                       onChanged: (bool value) {
                                                         setState(() {
                                                           print(
                                                               value.toString());
-                                                          isCheckedList[index] =
-                                                              value;
+                                                          isPincodeSelectedList[
+                                                              index] = value;
                                                         });
                                                       },
                                                     );
@@ -542,16 +648,31 @@ class HomePageState extends State<HomePage> {
                                             actions: <Widget>[
                                               FlatButton(
                                                   onPressed: () {
-                                                    selectedPincodes.clear();
+                                                    selectedPincodesList
+                                                        .clear();
+                                                    pincodeSelectedList.clear();
                                                     for (int i = 0;
                                                         i < pincodes.length;
                                                         i++) {
-                                                      if (isCheckedList[i] ==
-                                                          true)
-                                                        selectedPincodes
+                                                      if (isPincodeSelectedList[
+                                                              i] ==
+                                                          true) {
+                                                        selectedPincodesList
                                                             .add(pincodes[i]);
+                                                        pincodeSelectedList
+                                                            .add("true");
+                                                      } else {
+                                                        pincodeSelectedList
+                                                            .add("false");
+                                                      }
                                                     }
-
+                                                    print(pincodeSelectedList);
+                                                    putStringList(
+                                                        'selectedPincodes',
+                                                        pincodeSelectedList);
+                                                    setState(() {
+                                                      calculateNumberOfPincodesSelected();
+                                                    });
                                                     Navigator.of(context).pop();
                                                   },
                                                   child: Text(
@@ -575,7 +696,11 @@ class HomePageState extends State<HomePage> {
                                   },
                             icon: Icon(
                               Icons.arrow_drop_down,
-                              color: pincodes.length > 0 ? Theme.of(context).accentColor : Theme.of(context).accentColor.withOpacity(0.2),
+                              color: pincodes.length > 0
+                                  ? Theme.of(context).accentColor
+                                  : Theme.of(context)
+                                      .accentColor
+                                      .withOpacity(0.2),
                             ),
                             padding: const EdgeInsets.fromLTRB(8, 8, 0, 8),
                           )
@@ -708,7 +833,8 @@ class HomePageState extends State<HomePage> {
                     ),
                     onPressed: isStateSelected == false ||
                             isDistrictSelected == false ||
-                            isDurationSelected == false
+                        isPincodeSelectedToNotify == false
+                            // isDurationSelected == false
                         ? null
                         : () {
                             // print(_chosenDateTime);
@@ -742,7 +868,6 @@ class HomePageState extends State<HomePage> {
                   ),
                 ),
                 Container(
-                  // color: Theme.of(context).primaryColor,
                   height: 50,
                   child: Padding(
                     padding: const EdgeInsets.all(2.0),
@@ -754,6 +879,7 @@ class HomePageState extends State<HomePage> {
                       isCompleted: isCompleted,
                       isDurationSelected: isDurationSelected,
                       pressNotify: pressNotify,
+                      isPincodeSelectedToNotify: isPincodeSelectedToNotify
                     ),
                   ),
                 ),
@@ -772,6 +898,7 @@ class TotalVaccines extends StatelessWidget {
   final bool isCompleted;
   final bool isDurationSelected;
   final bool pressNotify;
+  final bool isPincodeSelectedToNotify;
 
   TotalVaccines(
       {this.numberOfCovaxin,
@@ -780,7 +907,8 @@ class TotalVaccines extends StatelessWidget {
       this.isDistrictSelected,
       this.isCompleted,
       this.isDurationSelected,
-      this.pressNotify});
+      this.pressNotify,
+      this.isPincodeSelectedToNotify});
 
   @override
   Widget build(BuildContext context) {
@@ -809,11 +937,16 @@ class TotalVaccines extends StatelessWidget {
                   "Please select district",
                   style: TextStyle(color: Colors.white),
                 )
-              : isDurationSelected == false
+              : isPincodeSelectedToNotify == false
                   ? Text(
-                      "Please select duration",
+                      "Please select pincode",
                       style: TextStyle(color: Colors.white),
                     )
+                  // isDurationSelected == false
+                  //             ? Text(
+                  //                 "Please select duration",
+                  //                 style: TextStyle(color: Colors.white),
+                  //               )
                   : pressNotify == false
                       ? Text(
                           "Please press Notify button",

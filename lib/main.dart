@@ -7,7 +7,6 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'homepage.dart';
 
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(CenterNotifyApp());
@@ -39,7 +38,6 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-
   String stateName;
   String districtName;
   String districtID = " ";
@@ -52,8 +50,11 @@ class _SplashScreenState extends State<SplashScreen> {
   int duration;
 
   List districts = [];
+  List<String> pincodes = [];
+  List<String> pincodeSelectedList;
 
-   Future<SharedPreferences> preferencesInstance = SharedPreferences.getInstance();
+  Future<SharedPreferences> preferencesInstance =
+      SharedPreferences.getInstance();
 
   @override
   void initState() {
@@ -61,22 +62,25 @@ class _SplashScreenState extends State<SplashScreen> {
 
     initializePreference();
 
-
-    Timer(Duration(seconds: 5),
-            ()=>Navigator.pushReplacement(context,
-            MaterialPageRoute(builder:
-                (context) => HomePage(stateName: this.stateName,
-                    districtName: this.districtName,
-                    districtID: this.districtID,
-                    isStateSelected: this.isStateSelected,
-                    isDistrictSelected: this.isDistrictSelected,
-                    pressNotify: this.pressNotify,
-                    isDurationSelected: this.isDurationSelected,
-                    duration: this.duration, preferencesInstance: this.preferencesInstance, districts: districts,)
-            )
-        )
-    );
-
+    Timer(
+        Duration(seconds: 5),
+        () => Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+                builder: (context) => HomePage(
+                      stateName: this.stateName,
+                      districtName: this.districtName,
+                      districtID: this.districtID,
+                      isStateSelected: this.isStateSelected,
+                      isDistrictSelected: this.isDistrictSelected,
+                      pressNotify: this.pressNotify,
+                      isDurationSelected: this.isDurationSelected,
+                      duration: this.duration,
+                      preferencesInstance: this.preferencesInstance,
+                      districts: districts,
+                      pincodes: this.pincodes,
+                      pincodeSelectedList: this.pincodeSelectedList,
+                    ))));
   }
 
   Future<String> initializePreference() async {
@@ -85,6 +89,8 @@ class _SplashScreenState extends State<SplashScreen> {
     districtName = preferences.getString("districtName") ?? "Select District";
     duration = preferences.getInt("duration") ?? null;
     districtID = preferences.getString("districtID") ?? null;
+    pincodes = preferences.getStringList("pincodes") ?? [];
+    pincodeSelectedList = preferences.getStringList("selectedPincodes") ?? [];
 
     if (preferences.getString("stateName") != null) {
       isStateSelected = true;
@@ -106,7 +112,6 @@ class _SplashScreenState extends State<SplashScreen> {
 
     return "Initialized";
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -139,6 +144,3 @@ class _SplashScreenState extends State<SplashScreen> {
         )));
   }
 }
-
-
-
