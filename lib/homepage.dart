@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -43,79 +44,94 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 /// Callback function for AlarmFire
-void scheduleNotification() async {
+void scheduleNotification() {
   print("printHello()");
-  List data;
-  int numberOfCovaxin = 0;
-  int numberOfCovishield = 0;
-
-  /// get shared values
-  final SharedPreferences prefs = await SharedPreferences.getInstance();
-  var districtID = prefs.getString("districtID");
-  var chosenDateTime = prefs.getString("chosenDateTime");
-  var districtName = prefs.getString("districtName");
-  int numberOfCovaxinPreviousValue = prefs.getInt("numberOfCovaxin");
-  int numberOfCovishieldPreviousValue = prefs.getInt("numberOfCovishield");
-
-  /// URL for API
-  String url =
-      "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByDistrict?district_id=$districtID&date=$chosenDateTime";
-
-  /// get data form API
-  var response = await http
-      .get(Uri.encodeFull(url), headers: {"Accept": "application/json"});
-  var convertDataToJson = json.decode(response.body);
-  data = convertDataToJson['sessions'];
-  List<String> lines = [];
-
-  /// find the number of vaccines and add them to the list
-  if (data != null && data.length != 0) {
-    data.forEach((element) {
-      if (element['vaccine'] == "COVAXIN") {
-        if (element['available_capacity'].round() > 0) {
-          List centerName = element['name'].toString().split(' ');
-          lines.add(
-              "COVAXIN: <b>${element['available_capacity'].round()}</b>  (<b>${element['pincode']}</b>: <i>${centerName[0]} ${centerName[1]}</i>)");
-        }
-        numberOfCovaxin += element['available_capacity'].round();
-      } else if (element['vaccine'] == "COVISHIELD") {
-        if (element['available_capacity'].round() > 0) {
-          List centerName = element['name'].toString().split(' ');
-          lines.add(
-              "COVISHIELD: <b>${element['available_capacity'].round()}</b>  (<b>${element['pincode']}</b>: <i>${centerName[0]} ${centerName[1]}</i>)");
-        }
-        numberOfCovishield += element['available_capacity'].round();
-      }
-    });
-  }
-
-  /// style the notification
-  final InboxStyleInformation inboxStyleInformation = InboxStyleInformation(
-      lines,
-      htmlFormatLines: true,
-      summaryText: 'summary <i>text</i>',
-      htmlFormatSummaryText: false);
-  final AndroidNotificationDetails androidPlatformChannelSpecifics =
-      AndroidNotificationDetails(channel.id, channel.name, channel.description,
-          styleInformation: inboxStyleInformation,
-          icon: '@mipmap/ic_launcher',
-          importance: Importance.high);
-  final NotificationDetails platformChannelSpecifics =
-      NotificationDetails(android: androidPlatformChannelSpecifics);
-
-  /// show Notification
-  // if (numberOfCovaxinPreviousValue != numberOfCovaxin ||
-  //     numberOfCovishieldPreviousValue !=
-  //         numberOfCovishield) if (numberOfCovaxin > 0 ||
-  //     numberOfCovishield > 0) {
-  putInt("numberOfCovaxin", numberOfCovaxin);
-  putInt("numberOfCovishield", numberOfCovishield);
-  flutterLocalNotificationsPlugin.show(
-      0,
-      "$districtName",
-      "Covishield: $numberOfCovishield\nCovaxin: $numberOfCovaxin",
-      platformChannelSpecifics);
+  // List data;
+  // int numberOfCovaxin = 0;
+  // int numberOfCovishield = 0;
+  //
+  // /// get shared values
+  // final SharedPreferences prefs = await SharedPreferences.getInstance();
+  // var districtID = prefs.getString("districtID");
+  // var chosenDateTime = prefs.getString("chosenDateTime");
+  // var districtName = prefs.getString("districtName");
+  // List<String> isSelectedPincodes = prefs.getStringList("selectedPincodes") ?? [];
+  // List<String> pincodes = prefs.getStringList("pincodes") ?? [];
+  // List<int> selectedPincodes = [];
+  // // List<String> selectedPincodes = [];
+  // for(int i = 0; i<pincodes.length; i++){
+  //   if(isSelectedPincodes[i] == 'true'){
+  //     selectedPincodes.add(int.parse(pincodes[i]));
+  //   }
   // }
+  // print("These are $selectedPincodes");
+  // print('pincodes');
+  // int numberOfCovaxinPreviousValue = prefs.getInt("numberOfCovaxin");
+  // int numberOfCovishieldPreviousValue = prefs.getInt("numberOfCovishield");
+  //
+  // /// URL for API
+  // String url =
+  //     "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByDistrict?district_id=$districtID&date=$chosenDateTime";
+  // // data.sort((ele1, ele2) {
+  // //   return ele1["pincode"].compareTo(ele2["pincode"]);
+  // // });
+  // /// get data form API
+  // var response = await http
+  //     .get(Uri.encodeFull(url), headers: {"Accept": "application/json"});
+  // var convertDataToJson = json.decode(response.body);
+  // data = convertDataToJson['sessions'];
+  // List<String> lines = [];
+  // // int index = 0;
+  // /// find the number of vaccines and add them to the list
+  // if (data != null && data.length != 0) {
+  //   data.forEach((element) {
+  //     if(selectedPincodes.contains(element['pincode'])){
+  //       if (element['vaccine'] == "COVAXIN") {
+  //         if (element['available_capacity'].round() > 0) {
+  //           List centerName = element['name'].toString().split(' ');
+  //           lines.add(
+  //               "COVAXIN: <b>${element['available_capacity'].round()}</b>  (<b>${element['pincode']}</b>: <i>${centerName[0]} ${centerName[1]}</i>)");
+  //         }
+  //         numberOfCovaxin += element['available_capacity'].round();
+  //       } else if (element['vaccine'] == "COVISHIELD") {
+  //         if (element['available_capacity'].round() > 0) {
+  //           List centerName = element['name'].toString().split(' ');
+  //           lines.add(
+  //               "COVISHIELD: <b>${element['available_capacity'].round()}</b>  (<b>${element['pincode']}</b>: <i>${centerName[0]} ${centerName[1]}</i>)");
+  //         }
+  //         numberOfCovishield += element['available_capacity'].round();
+  //       }
+  //     }
+  //   });
+  // }
+  //
+  // /// style the notification
+  // final InboxStyleInformation inboxStyleInformation = InboxStyleInformation(
+  //     lines,
+  //     htmlFormatLines: true,
+  //     summaryText: 'summary <i>text</i>',
+  //     htmlFormatSummaryText: false);
+  // final AndroidNotificationDetails androidPlatformChannelSpecifics =
+  //     AndroidNotificationDetails(channel.id, channel.name, channel.description,
+  //         styleInformation: inboxStyleInformation,
+  //         icon: '@mipmap/ic_launcher',
+  //         importance: Importance.high);
+  // final NotificationDetails platformChannelSpecifics =
+  //     NotificationDetails(android: androidPlatformChannelSpecifics);
+  //
+  // /// show Notification
+  // // if (numberOfCovaxinPreviousValue != numberOfCovaxin ||
+  // //     numberOfCovishieldPreviousValue !=
+  // //         numberOfCovishield) if (numberOfCovaxin > 0 ||
+  // //     numberOfCovishield > 0) {
+  // putInt("numberOfCovaxin", numberOfCovaxin);
+  // putInt("numberOfCovishield", numberOfCovishield);
+  // flutterLocalNotificationsPlugin.show(
+  //     0,
+  //     "$districtName",
+  //     "Covishield: $numberOfCovishield\nCovaxin: $numberOfCovaxin",
+  //     platformChannelSpecifics);
+  // // }
 }
 
 /// Remove shared value
@@ -278,6 +294,8 @@ class HomePageState extends State<HomePage> {
     pincodeSelectedList.forEach((element) {
       if (element == 'true') numberOfPincodeSelected++;
     });
+    if(numberOfPincodeSelected > 0)
+      isPincodeSelectedToNotify = true;
     return numberOfPincodeSelected.toString();
   }
 
@@ -325,7 +343,6 @@ class HomePageState extends State<HomePage> {
           scrollDirection: Axis.horizontal,
           itemCount: selectedPincodes.length,
           itemBuilder: (BuildContext context, int index) {
-              isPincodeSelectedToNotify = true;
             return Text(
               index == numberOfPincodeSelected - 1
                   ? "${selectedPincodes[index]}"
@@ -464,6 +481,7 @@ class HomePageState extends State<HomePage> {
                                   "stateName", states[index]['state_name']);
                               putJSON("districts",
                                   allDistricts[states[index]['state_id'] - 1]);
+                              isPincodeSelectedToNotify = false;
                             },
                           );
                         },
@@ -528,6 +546,7 @@ class HomePageState extends State<HomePage> {
                                   formatter.format(DateTime.now().add(Duration(
                                     hours: 8,
                                   ))));
+                              isPincodeSelectedToNotify = false;
                             },
                           );
                         },
