@@ -1,4 +1,6 @@
 import 'dart:collection';
+import 'dart:isolate';
+import 'dart:math';
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -44,94 +46,104 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 /// Callback function for AlarmFire
-void scheduleNotification() {
-  print("printHello()");
-  // List data;
-  // int numberOfCovaxin = 0;
-  // int numberOfCovishield = 0;
-  //
-  // /// get shared values
+void scheduleNotification() async {
+  // final int isolateId = Isolate.current.hashCode;
+  final DateTime now = DateTime.now();
   // final SharedPreferences prefs = await SharedPreferences.getInstance();
-  // var districtID = prefs.getString("districtID");
-  // var chosenDateTime = prefs.getString("chosenDateTime");
-  // var districtName = prefs.getString("districtName");
-  // List<String> isSelectedPincodes = prefs.getStringList("selectedPincodes") ?? [];
-  // List<String> pincodes = prefs.getStringList("pincodes") ?? [];
-  // List<int> selectedPincodes = [];
-  // // List<String> selectedPincodes = [];
-  // for(int i = 0; i<pincodes.length; i++){
-  //   if(isSelectedPincodes[i] == 'true'){
-  //     selectedPincodes.add(int.parse(pincodes[i]));
-  //   }
+  // var counter = prefs.getInt("counter") ?? 0;
+  // prefs.setInt("counter", ++counter);
+  // print(counter);
+  print("$now");
+
+  List data;
+  int numberOfCovaxin = 0;
+  int numberOfCovishield = 0;
+
+  /// get shared values
+  final SharedPreferences prefs = await SharedPreferences.getInstance();
+  prefs.reload();
+  var districtID = prefs.getString("districtID");
+
+  var chosenDateTime = prefs.getString("chosenDateTime");
+  var districtName = prefs.getString("districtName");
+  List<String> isSelectedPincodes =
+      prefs.getStringList("selectedPincodes") ?? [];
+  List<String> pincodes = prefs.getStringList("pincodes") ?? [];
+  List<int> selectedPincodes = [];
+  // List<String> selectedPincodes = [];
+  for (int i = 0; i < pincodes.length; i++) {
+    if (isSelectedPincodes[i] == 'true') {
+      selectedPincodes.add(int.parse(pincodes[i]));
+    }
+  }
+  print("These are $selectedPincodes");
+  print('pincodes');
+  int numberOfCovaxinPreviousValue = prefs.getInt("numberOfCovaxin");
+  int numberOfCovishieldPreviousValue = prefs.getInt("numberOfCovishield");
+
+  /// URL for API
+  String url =
+      "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByDistrict?district_id=$districtID&date=$chosenDateTime";
+  // data.sort((ele1, ele2) {
+  //   return ele1["pincode"].compareTo(ele2["pincode"]);
+  // });
+  /// get data form API
+  var response = await http
+      .get(Uri.encodeFull(url), headers: {"Accept": "application/json"});
+  var convertDataToJson = json.decode(response.body);
+  data = convertDataToJson['sessions'];
+  List<String> lines = [];
+
+  /// find the number of vaccines and add them to the list
+  if (data != null && data.length != 0) {
+    data.forEach((element) {
+      if (selectedPincodes.contains(element['pincode'])) {
+        if (element['vaccine'] == "COVAXIN") {
+          if (element['available_capacity'].round() > 0) {
+            List centerName = element['name'].toString().split(' ');
+            lines.add(
+                "CVN-${element['fee_type']}: <b>${element['available_capacity'].round()}</b>  (<b>${element['pincode']}</b>: <i>${centerName[0]} ${centerName[1]}</i>)");
+          }
+          numberOfCovaxin += element['available_capacity'].round();
+        } else if (element['vaccine'] == "COVISHIELD") {
+          if (element['available_capacity'].round() > 0) {
+            List centerName = element['name'].toString().split(' ');
+            lines.add(
+                "CVSD-${element['fee_type']}: <b>${element['available_capacity'].round()}</b>  (<b>${element['pincode']}</b>: <i>${centerName[0]} ${centerName[1]}</i>)");
+          }
+          numberOfCovishield += element['available_capacity'].round();
+        }
+      }
+    });
+  }
+
+  /// style the notification
+  final InboxStyleInformation inboxStyleInformation = InboxStyleInformation(
+      lines,
+      htmlFormatLines: true,
+      summaryText: 'summary <i>text</i>',
+      htmlFormatSummaryText: false);
+  final AndroidNotificationDetails androidPlatformChannelSpecifics =
+      AndroidNotificationDetails(channel.id, channel.name, channel.description,
+          styleInformation: inboxStyleInformation,
+          icon: '@mipmap/ic_launcher',
+          importance: Importance.high);
+  final NotificationDetails platformChannelSpecifics =
+      NotificationDetails(android: androidPlatformChannelSpecifics);
+
+  /// show Notification
+  // if (numberOfCovaxinPreviousValue != numberOfCovaxin ||
+  //     numberOfCovishieldPreviousValue !=
+  //         numberOfCovishield) if (numberOfCovaxin > 0 ||
+  //     numberOfCovishield > 0) {
+  putInt("numberOfCovaxin", numberOfCovaxin);
+  putInt("numberOfCovishield", numberOfCovishield);
+  flutterLocalNotificationsPlugin.show(
+      0,
+      "$districtName",
+      "Covishield: $numberOfCovishield\nCovaxin: $numberOfCovaxin",
+      platformChannelSpecifics);
   // }
-  // print("These are $selectedPincodes");
-  // print('pincodes');
-  // int numberOfCovaxinPreviousValue = prefs.getInt("numberOfCovaxin");
-  // int numberOfCovishieldPreviousValue = prefs.getInt("numberOfCovishield");
-  //
-  // /// URL for API
-  // String url =
-  //     "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByDistrict?district_id=$districtID&date=$chosenDateTime";
-  // // data.sort((ele1, ele2) {
-  // //   return ele1["pincode"].compareTo(ele2["pincode"]);
-  // // });
-  // /// get data form API
-  // var response = await http
-  //     .get(Uri.encodeFull(url), headers: {"Accept": "application/json"});
-  // var convertDataToJson = json.decode(response.body);
-  // data = convertDataToJson['sessions'];
-  // List<String> lines = [];
-  // // int index = 0;
-  // /// find the number of vaccines and add them to the list
-  // if (data != null && data.length != 0) {
-  //   data.forEach((element) {
-  //     if(selectedPincodes.contains(element['pincode'])){
-  //       if (element['vaccine'] == "COVAXIN") {
-  //         if (element['available_capacity'].round() > 0) {
-  //           List centerName = element['name'].toString().split(' ');
-  //           lines.add(
-  //               "COVAXIN: <b>${element['available_capacity'].round()}</b>  (<b>${element['pincode']}</b>: <i>${centerName[0]} ${centerName[1]}</i>)");
-  //         }
-  //         numberOfCovaxin += element['available_capacity'].round();
-  //       } else if (element['vaccine'] == "COVISHIELD") {
-  //         if (element['available_capacity'].round() > 0) {
-  //           List centerName = element['name'].toString().split(' ');
-  //           lines.add(
-  //               "COVISHIELD: <b>${element['available_capacity'].round()}</b>  (<b>${element['pincode']}</b>: <i>${centerName[0]} ${centerName[1]}</i>)");
-  //         }
-  //         numberOfCovishield += element['available_capacity'].round();
-  //       }
-  //     }
-  //   });
-  // }
-  //
-  // /// style the notification
-  // final InboxStyleInformation inboxStyleInformation = InboxStyleInformation(
-  //     lines,
-  //     htmlFormatLines: true,
-  //     summaryText: 'summary <i>text</i>',
-  //     htmlFormatSummaryText: false);
-  // final AndroidNotificationDetails androidPlatformChannelSpecifics =
-  //     AndroidNotificationDetails(channel.id, channel.name, channel.description,
-  //         styleInformation: inboxStyleInformation,
-  //         icon: '@mipmap/ic_launcher',
-  //         importance: Importance.high);
-  // final NotificationDetails platformChannelSpecifics =
-  //     NotificationDetails(android: androidPlatformChannelSpecifics);
-  //
-  // /// show Notification
-  // // if (numberOfCovaxinPreviousValue != numberOfCovaxin ||
-  // //     numberOfCovishieldPreviousValue !=
-  // //         numberOfCovishield) if (numberOfCovaxin > 0 ||
-  // //     numberOfCovishield > 0) {
-  // putInt("numberOfCovaxin", numberOfCovaxin);
-  // putInt("numberOfCovishield", numberOfCovishield);
-  // flutterLocalNotificationsPlugin.show(
-  //     0,
-  //     "$districtName",
-  //     "Covishield: $numberOfCovishield\nCovaxin: $numberOfCovaxin",
-  //     platformChannelSpecifics);
-  // // }
 }
 
 /// Remove shared value
@@ -157,6 +169,15 @@ putString(key, val) async {
       SharedPreferences.getInstance();
   final SharedPreferences prefs = await preferencesInstance;
   var _res = prefs.setString("$key", val);
+  return _res;
+}
+
+/// Adding a bool value
+putBool(key, val) async {
+  Future<SharedPreferences> preferencesInstance =
+      SharedPreferences.getInstance();
+  final SharedPreferences prefs = await preferencesInstance;
+  var _res = prefs.setBool("$key", val);
   return _res;
 }
 
@@ -188,6 +209,7 @@ class HomePage extends StatefulWidget {
   final bool isDistrictSelected;
   final bool pressNotify;
   final bool isDurationSelected;
+  final bool isBackgroundNotificationON;
 
   final int duration;
 
@@ -208,7 +230,8 @@ class HomePage extends StatefulWidget {
       this.districts,
       this.preferencesInstance,
       this.pincodes,
-      this.pincodeSelectedList});
+      this.pincodeSelectedList,
+      this.isBackgroundNotificationON});
 
   @override
   HomePageState createState() => HomePageState(
@@ -223,7 +246,8 @@ class HomePage extends StatefulWidget {
       districts: this.districts,
       preferencesInstance: this.preferencesInstance,
       pincodes: this.pincodes,
-      pincodeSelectedList: this.pincodeSelectedList);
+      pincodeSelectedList: this.pincodeSelectedList,
+      isBackgroundNotificationON: this.isBackgroundNotificationON);
 }
 
 class HomePageState extends State<HomePage> {
@@ -239,7 +263,8 @@ class HomePageState extends State<HomePage> {
       this.districts,
       this.preferencesInstance,
       this.pincodes,
-      this.pincodeSelectedList});
+      this.pincodeSelectedList,
+      this.isBackgroundNotificationON});
 
   static List<bool> isPincodeSelectedList = [];
   List durations = [3, 15, 30, 60, 120, 180, 240];
@@ -262,7 +287,7 @@ class HomePageState extends State<HomePage> {
   bool isCompleted = true;
   bool isTimeOn = false;
   bool initialized = false;
-  bool isBackgroundNotificationON = false;
+  bool isBackgroundNotificationON;
   bool isPincodeSelectedToNotify = false;
 
   int indexOfList;
@@ -286,6 +311,10 @@ class HomePageState extends State<HomePage> {
     AndroidAlarmManager.initialize();
     registerChannel();
     calculateNumberOfPincodesSelected();
+    if(isBackgroundNotificationON){
+      AndroidAlarmManager.cancel(0);
+      print("cancel!!");
+    }
   }
 
   /// calculate number of pincodes have selected by the user
@@ -294,8 +323,7 @@ class HomePageState extends State<HomePage> {
     pincodeSelectedList.forEach((element) {
       if (element == 'true') numberOfPincodeSelected++;
     });
-    if(numberOfPincodeSelected > 0)
-      isPincodeSelectedToNotify = true;
+    if (numberOfPincodeSelected > 0) isPincodeSelectedToNotify = true;
     return numberOfPincodeSelected.toString();
   }
 
@@ -319,9 +347,10 @@ class HomePageState extends State<HomePage> {
     print("Set Alarm Fire");
     final int helloAlarmID = 0;
     await AndroidAlarmManager.periodic(
-      const Duration(seconds: 1), helloAlarmID, scheduleNotification,
-      // exact: true
-    );
+        const Duration(minutes: 1), helloAlarmID, scheduleNotification,
+        wakeup: true
+        // exact: true
+        );
   }
 
   /// generate horizontal ListView for selected Pincodes
@@ -352,6 +381,26 @@ class HomePageState extends State<HomePage> {
           }),
     );
   }
+
+  // void scheduleNotification() async {
+  //   final int isolateId = Isolate.current.hashCode;
+  //   final DateTime now = DateTime.now();
+  //   final SharedPreferences prefs = await SharedPreferences.getInstance();
+  //   var counter = prefs.getInt("counter") ?? 0;
+  //   prefs.setInt("counter", ++counter);
+  //   print(counter);
+  //   print("$isolateId ---- $now");
+  //   flutterLocalNotificationsPlugin.show(
+  //       0,
+  //       "AlarmManager working in background",
+  //       "Yes!! It is working.",
+  //       NotificationDetails(
+  //           android: AndroidNotificationDetails("asdfasdf", "kjbwkfbkjsd", "jvsefjvasjvcasvdavsmdfvmas dv",
+  //               icon: '@mipmap/ic_launcher',
+  //               importance: Importance.high)
+  //       ));
+  //   // }
+  // }
 
   /// get pincodes for the selected district by calling API
   void getPincodes(String districtID, String chosenDateTime) async {
@@ -433,9 +482,6 @@ class HomePageState extends State<HomePage> {
       });
   }
 
-
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -495,6 +541,7 @@ class HomePageState extends State<HomePage> {
                         isDistrictSelected = false;
                         pressNotify = false;
                         districtName = "Select District";
+                        isCompleted = true;
                         removeKey("districtName");
                         setState(() {
                           districts = allDistricts[value - 1];
@@ -504,6 +551,9 @@ class HomePageState extends State<HomePage> {
                           putStringList("pincodes", pincodes);
                           putStringList(
                               'selectedPincodes', pincodeSelectedList);
+                          isBackgroundNotificationON = false;
+                          putBool("isBackgroundNotificationON", isBackgroundNotificationON);
+                          AndroidAlarmManager.cancel(0);
                         });
                       }),
                 ),
@@ -557,11 +607,16 @@ class HomePageState extends State<HomePage> {
                           _timer = null;
                         }
                         pressNotify = false;
+                        isCompleted = true;
+                        isPincodeSelectedToNotify = false;
                         setState(() {
                           // isCompleted = false;
                           districtID = value.toString();
                           isDistrictSelected = true;
                           isStateSelected = true;
+                          isBackgroundNotificationON = false;
+                          putBool("isBackgroundNotificationON", isBackgroundNotificationON);
+                          AndroidAlarmManager.cancel(0);
                         });
                       }),
                 ),
@@ -691,6 +746,11 @@ class HomePageState extends State<HomePage> {
                                                         pincodeSelectedList);
                                                     setState(() {
                                                       calculateNumberOfPincodesSelected();
+                                                      isBackgroundNotificationON = false;
+                                                      isCompleted = true;
+                                                      pressNotify = false;
+                                                      putBool("isBackgroundNotificationON", isBackgroundNotificationON);
+                                                      AndroidAlarmManager.cancel(0);
                                                     });
                                                     Navigator.of(context).pop();
                                                   },
@@ -804,35 +864,36 @@ class HomePageState extends State<HomePage> {
                         }),
                   ),
                 ),
-                Container(
-                    color: Color.fromARGB(255, 38, 40, 47),
-                    padding: EdgeInsets.all(20),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text("Notification",
-                            style: isBackgroundNotificationON
-                                ? TextStyle(color: Colors.white, fontSize: 17)
-                                : TextStyle(
-                                    color: Colors.white54, fontSize: 17)),
-                        Switch(
-                          onChanged: (bool value) {
-                            setState(() {
-                              if (!value) {
-                                print("Cancel!!");
-                                AndroidAlarmManager.cancel(0);
-                              }
-                              isBackgroundNotificationON = value;
-                            });
-                          },
-                          value: isBackgroundNotificationON,
-                          activeColor: Theme.of(context).accentColor,
-                          activeTrackColor: Theme.of(context).primaryColor,
-                          inactiveThumbColor: Theme.of(context).primaryColor,
-                          inactiveTrackColor: Theme.of(context).primaryColor,
-                        )
-                      ],
-                    )),
+                // Container(
+                //     color: Color.fromARGB(255, 38, 40, 47),
+                //     padding: EdgeInsets.all(20),
+                //     child: Row(
+                //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                //       children: [
+                //         Text("Notification",
+                //             style: isBackgroundNotificationON
+                //                 ? TextStyle(color: Colors.white, fontSize: 17)
+                //                 : TextStyle(
+                //                     color: Colors.white54, fontSize: 17)),
+                //         Switch(
+                //           onChanged: (bool value) {
+                //             setState(() {
+                //               if (!value) {
+                //                 print("Cancel!!");
+                //                 AndroidAlarmManager.cancel(0);
+                //               }
+                //               isBackgroundNotificationON = value;
+                //               putBool("isBackgroundNotificationON", value);
+                //             });
+                //           },
+                //           value: isBackgroundNotificationON,
+                //           activeColor: Theme.of(context).accentColor,
+                //           activeTrackColor: Theme.of(context).primaryColor,
+                //           inactiveThumbColor: Theme.of(context).primaryColor,
+                //           inactiveTrackColor: Theme.of(context).primaryColor,
+                //         )
+                //       ],
+                //     )),
                 Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: RaisedButton(
@@ -840,20 +901,20 @@ class HomePageState extends State<HomePage> {
                     child: Text(
                       isStateSelected == false ||
                               isDistrictSelected == false ||
-                              isDurationSelected == false ||
+                              // isDurationSelected == false ||
                               pressNotify == false
                           ? "Notify"
                           : "Stop",
                       style: isStateSelected == false ||
-                              isDistrictSelected == false ||
-                              isDurationSelected == false
+                              isDistrictSelected == false
+                          // || isDurationSelected == false
                           ? TextStyle(color: Colors.white24)
                           : TextStyle(color: Colors.black),
                     ),
                     onPressed: isStateSelected == false ||
                             isDistrictSelected == false ||
-                        isPincodeSelectedToNotify == false
-                            // isDurationSelected == false
+                            isPincodeSelectedToNotify == false
+                        // isDurationSelected == false
                         ? null
                         : () {
                             // print(_chosenDateTime);
@@ -865,14 +926,25 @@ class HomePageState extends State<HomePage> {
                                 )));
                                 putString("chosenDateTime", _chosenDateTime);
                               }
-                              if (_timer != null) {
-                                _timer.cancel();
-                                _timer = null;
+                              // if (_timer != null) {
+                              //   _timer.cancel();
+                              //   _timer = null;
+                              //   pressNotify = false;
+                              // }
+                              if (pressNotify == true) {
+                                AndroidAlarmManager.cancel(0);
                                 pressNotify = false;
+                                isCompleted = true;
+                                isBackgroundNotificationON = false;
+                                putBool("isBackgroundNotificationON", isBackgroundNotificationON);
+                                AndroidAlarmManager.cancel(0);
+
                               } else {
                                 isCompleted = false;
-                                isTimeOn = true;
+                                // isTimeOn = true;
                                 pressNotify = true;
+                                isBackgroundNotificationON = true;
+                                putBool("isBackgroundNotificationON", isBackgroundNotificationON);
                                 url =
                                     "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/findByDistrict?district_id=$districtID&date=$_chosenDateTime";
                                 putString("url", url);
@@ -891,15 +963,14 @@ class HomePageState extends State<HomePage> {
                   child: Padding(
                     padding: const EdgeInsets.all(2.0),
                     child: TotalVaccines(
-                      numberOfCovaxin: numberOfCovaxin,
-                      numberOfCovishield: numberOfCovishield,
-                      isStateSelected: isStateSelected,
-                      isDistrictSelected: isDistrictSelected,
-                      isCompleted: isCompleted,
-                      isDurationSelected: isDurationSelected,
-                      pressNotify: pressNotify,
-                      isPincodeSelectedToNotify: isPincodeSelectedToNotify
-                    ),
+                        numberOfCovaxin: numberOfCovaxin,
+                        numberOfCovishield: numberOfCovishield,
+                        isStateSelected: isStateSelected,
+                        isDistrictSelected: isDistrictSelected,
+                        isCompleted: isCompleted,
+                        // isDurationSelected: isDurationSelected,
+                        pressNotify: pressNotify,
+                        isPincodeSelectedToNotify: isPincodeSelectedToNotify),
                   ),
                 ),
               ],
@@ -915,7 +986,8 @@ class TotalVaccines extends StatelessWidget {
   final bool isStateSelected;
   final bool isDistrictSelected;
   final bool isCompleted;
-  final bool isDurationSelected;
+
+  // final bool isDurationSelected;
   final bool pressNotify;
   final bool isPincodeSelectedToNotify;
 
@@ -925,7 +997,7 @@ class TotalVaccines extends StatelessWidget {
       this.isStateSelected,
       this.isDistrictSelected,
       this.isCompleted,
-      this.isDurationSelected,
+      // this.isDurationSelected,
       this.pressNotify,
       this.isPincodeSelectedToNotify});
 

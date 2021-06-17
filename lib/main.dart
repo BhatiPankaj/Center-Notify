@@ -1,3 +1,4 @@
+// import 'dart:html';
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(CenterNotifyApp());
 }
+
 
 class CenterNotifyApp extends StatelessWidget {
   const CenterNotifyApp({Key key}) : super(key: key);
@@ -46,6 +48,7 @@ class _SplashScreenState extends State<SplashScreen> {
   bool isDistrictSelected = false;
   bool pressNotify = false;
   bool isDurationSelected = false;
+  bool isBackgroundNotificationON;
 
   int duration;
 
@@ -80,6 +83,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       districts: districts,
                       pincodes: this.pincodes,
                       pincodeSelectedList: this.pincodeSelectedList,
+                    isBackgroundNotificationON: this.isBackgroundNotificationON
                     ))));
   }
 
@@ -91,6 +95,7 @@ class _SplashScreenState extends State<SplashScreen> {
     districtID = preferences.getString("districtID") ?? null;
     pincodes = preferences.getStringList("pincodes") ?? [];
     pincodeSelectedList = preferences.getStringList("selectedPincodes") ?? [];
+    isBackgroundNotificationON = preferences.getBool("isBackgroundNotificationON") ?? false;
 
     if (preferences.getString("stateName") != null) {
       isStateSelected = true;
